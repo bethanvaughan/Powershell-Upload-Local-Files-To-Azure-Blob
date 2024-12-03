@@ -1,1 +1,55 @@
+# Interactive inputs for resource details
+
+$resourceGroupName = Read-Host "Enter the name of the resource group"
+$storageAccountName = Read-Host "Enter the name of the storage account"
+$containerName = Read-Host "Enter the name of the Blob container"
+$localFilePath = Read-Host "Enter the full path of the local file to upload"
+
+# Check if the resource group exists
+
+$resourceGroup = Get-AzResourceGroup -Name $resourceGroupName -ErrorAction SilentlyContinue
+if ($resourceGroup -eq null) {
+    Write-Host "Resource group '$resourceGroupName' does not exist. Creating it..." -ForegroundColor Yellow
+    New-AzResourceGroup -Name $resourceGroupName -Location "uksouth"
+} else {
+    Write-Host "Resource group '$resourceGroupName' exists." -ForegroundColor Green
+}
+
+# Check if the storage account exists
+
+$storageAccount = Get-AzStorageAccount -ResourceGroupName $resourceGroupName -Name $storageAccountName -ErrorAction SilentlyContinue
+if ($storageAccount -eq null) {
+    Write-Host "Storage account '$storageAccountName' does not exist. Creating it..." -ForegroundColor Yellow
+    $storageAccount = New-AzStorageAccount -ResourceGroupName $resourceGroupName -Name $storageAccountName -SkuName "Standard_LRS" -Kind "StorageV2" -Location "eastus"
+} else {
+    Write-Host "Storage account '$storageAccountName' exists." -ForegroundColor Green
+}
+
+# Get the storage account context
+
+$storageContext = $storageAccount.Context
+
+# Check if the Blob container exists
+
+$container = Get-AzStorageContainer -Context $storageContext -Name $containerName -ErrorAction SilentlyContinue
+if ($container -eq null) {
+    Write-Host "Blob container '$containerName' does not exist. Creating it..." -ForegroundColor Yellow
+    $container = New-AzStorageContainer -Name $containerName -Context $storageContext -PublicAccess Off
+} else {
+    Write-Host "Blob container '$containerName' exists." -ForegroundColor Green
+}
+
+# Check if the local file exists
+
+if (-not (Test-Path $localFilePath)) {
+    Write-Host "The file '$localFilePath' does not exist. Please check the path and try again." -ForegroundColor Red
+    exit
+}
+
+# Upload the file
+
+Write-Host "Uploading file '$localFilePath' to container '$containerName' in storage account '$storageAccountName'..." -ForegroundColor Yellow
+Set-AzStorageBlobContent -File $localFilePath -Container $containerName -Context $storageContext
+
+Write-Host "File upload complete!" -ForegroundColor Green
 
